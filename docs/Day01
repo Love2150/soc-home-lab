@@ -1,0 +1,54 @@
+# 🛡️ Enterprise SOC Home Lab
+
+**Date:** July 18, 2026
+
+## Objective
+
+Build the foundation for an enterprise-style SOC home lab by preparing the Ubuntu host, configuring virtualization, and creating a GitHub repository to document progress.
+
+## Environment
+
+- Host: HP Laptop 15-dy1xxx
+- Operating System: Ubuntu 24.04 LTS
+- CPU: Intel Core i3-1005G1
+- RAM: Upgraded from 8 GB to 16 GB
+- Virtualization: KVM / libvirt
+
+## Tasks Completed
+
+- Installed Ubuntu 24.04 LTS.
+- Verified hardware virtualization support.
+- Installed KVM and libvirt.
+- Confirmed the `libvirtd` service was running.
+- Installed and verified Virtual Machine Manager.
+- Created a GitHub repository (`soc-home-lab`).
+- Connected Ubuntu to GitHub using Git and GitHub CLI.
+- Created the initial project structure.
+- Configured a `.gitignore` file to exclude VM disks, snapshots, and ISO files.
+
+## Challenges Encountered
+
+While creating the `.gitignore` file, I accidentally created it as a directory instead of a file. I also mistakenly entered `.gitignore` contents directly into the terminal, resulting in several "command not found" errors. After troubleshooting, I removed the directory, created the file correctly, and successfully committed the changes to GitHub.
+
+## Lessons Learned
+
+- Small syntax errors in Git commands can cause unexpected issues.
+- Understanding the difference between files and directories is important when working in Linux.
+- Using Git from the command line provides better insight into how version control works.
+
+## Next Steps
+
+- Download Windows 11 Enterprise Evaluation.
+- Download Windows Server 2022 Evaluation.
+- Create the first Windows 11 virtual machine using KVM.
+- Begin building the Active Directory environment.Building an enterprise-style Security Operations Center using KVM virtualization.
+
+## Objectives
+
+- Learn enterprise SOC operations
+- Build Active Directory
+- Deploy Wazuh SIEM
+- Configure Sysmon
+- Deploy Zeek and Suricata
+- Use Velociraptor for DFIR
+- Practice MITRE ATT&CK detect
