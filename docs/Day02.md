@@ -1,238 +1,139 @@
-# Day 2 – Windows 11 Enterprise Deployment
+# Day 2 — Windows 11 Enterprise Deployment
 
+| Field | Value |
+|---|---|
+| Date | 2026-07-21 |
+| Status | Complete |
+| Phase | Windows endpoint deployment |
 
-**Date:** July 21, 2026
+## Summary
 
+Day 2 established the first Windows endpoint in the Enterprise SOC Home Lab. The Windows 11 Enterprise workstation was deployed, internet connectivity was verified, and virtualization integration was completed by installing and validating the QEMU Guest Agent. The endpoint is now ready for Windows updates, a clean-install snapshot, endpoint security tooling, telemetry collection, and future detection engineering and incident response exercises.
 
----
+## Objectives
 
+- [x] Create a Windows 11 Enterprise virtual machine.
+- [x] Complete the operating system installation.
+- [x] Configure virtualization integration.
+- [x] Prepare the endpoint for future security monitoring.
 
-# Objective
-
-
-The objective of today's lab was to deploy the first Windows endpoint for the Enterprise SOC Home Lab. This included creating a Windows 11 Enterprise virtual machine, completing the operating system installation, configuring virtualization integration, and preparing the endpoint for future security monitoring.
-
-
----
-
-
-# Environment
-
+## Environment
 
 | Component | Details |
-
-|-----------|---------|
-
-| Host Operating System | Ubuntu 24.04 LTS |
-
+|---|---|
+| Host operating system | Ubuntu 24.04 LTS |
 | Hypervisor | QEMU/KVM |
-
-| VM Manager | Virtual Machine Manager (virt-manager) |
-
-| Guest Operating System | Windows 11 Enterprise Evaluation |
-
-| Virtual Machine Name | WIN11-CLIENT01 |
-
+| VM manager | Virtual Machine Manager (`virt-manager`) |
+| Guest operating system | Windows 11 Enterprise Evaluation |
+| Virtual machine | `WIN11-CLIENT01` |
 | Firmware | UEFI |
-
+| Disk format | QCOW2 |
 | Network | Default NAT |
+| Guest integration | QEMU Guest Agent |
 
-| Guest Integration | QEMU Guest Agent |
-
-
----
-
-
-# Tasks Completed
-
+## Work Completed
 
 - Downloaded the Windows 11 Enterprise Evaluation ISO.
-
-- Created the `WIN11-CLIENT01` virtual machine using KVM/libvirt.
-
+- Created `WIN11-CLIENT01` with KVM/libvirt.
 - Configured virtual CPU, memory, storage, and networking.
-
-- Booted the VM using UEFI firmware.
-
+- Booted the virtual machine with UEFI firmware.
 - Completed the Windows 11 Enterprise installation.
-
 - Configured a local administrator account.
-
-- Verified internet connectivity inside the virtual machine.
-
+- Verified internet connectivity from inside the virtual machine.
 - Downloaded and mounted the VirtIO driver ISO.
-
 - Installed the QEMU Guest Agent.
+- Verified that the QEMU Guest Agent service was running and configured with an **Automatic** startup type.
 
-- Verified the QEMU Guest Agent service is running and configured to start automatically.
+## Implementation and Validation
 
+### Windows deployment
 
----
+The `WIN11-CLIENT01` virtual machine was created in Virtual Machine Manager on the Ubuntu QEMU/KVM host. It used UEFI firmware, QCOW2 storage, and the default NAT network. Windows 11 Enterprise Evaluation was installed from the downloaded ISO, and a local administrator account was configured.
 
+### VirtIO integration
 
-# Virtual Machine Configuration
+The `virtio-win.iso` image was downloaded, attached to the virtual machine, and opened from the VirtIO CD within Windows. The guest tools were then installed inside the Windows guest.
 
+### Validation
 
-| Setting | Value |
+- Windows 11 Enterprise completed installation and reached the initial desktop.
+- Internet connectivity worked inside `WIN11-CLIENT01`.
+- The **QEMU Guest Agent** Windows service was running.
+- The service startup type was set to **Automatic**.
 
-|----------|---------|
+## Commands and Queries
 
-| Name | WIN11-CLIENT01 |
+No repeatable command-line sequence was recorded for this phase. Deployment and guest-tool installation were completed through Virtual Machine Manager, Windows Setup, the mounted VirtIO ISO, and the Windows Services interface.
 
-| Operating System | Windows 11 Enterprise Evaluation |
+## Evidence
 
-| Firmware | UEFI |
+The session recorded the following screenshot subjects:
 
-| Disk Format | QCOW2 |
+- Windows Setup.
+- Windows installation progress.
+- Initial Windows desktop.
+- Virtual Machine Manager configuration.
+- Mounted VirtIO ISO.
+- Running QEMU Guest Agent service.
 
-| Network | NAT |
+No relative screenshot paths were included in the source journal.
 
-| Integration Services | QEMU Guest Agent |
+## Challenges and Troubleshooting
 
+| Problem | Investigation | Resolution or status |
+|---|---|---|
+| The virtual machine initially opened the UEFI Boot Manager instead of starting Windows Setup automatically. | The Windows installation media was available as a boot option. | Selected the Windows installation media from the boot menu and successfully launched Windows Setup. |
+| The first QEMU Guest Agent installation attempt used a Windows executable downloaded on the Ubuntu host. | The attempt failed because Linux cannot execute Windows `.exe` installers. | Downloaded and mounted `virtio-win.iso`, attached it to the virtual machine, opened the VirtIO CD in Windows, and installed the guest tools successfully. Confirmed that the QEMU Guest Agent service was running with an **Automatic** startup type. |
 
----
+## Findings and Analyst Notes
 
+- A UEFI virtual machine may require manual selection of its installation media when it enters the firmware boot manager instead of launching the installer.
+- Windows guest tools must be installed within the Windows guest; mounting the VirtIO ISO provided the required installation path.
+- The running QEMU Guest Agent service and **Automatic** startup type confirmed successful guest integration.
+- `WIN11-CLIENT01` now provides the Windows endpoint foundation needed for security tooling and telemetry collection.
 
-# Challenges Encountered
+## Decisions
 
+- Use the mounted `virtio-win.iso` rather than attempting to run a Windows installer on the Ubuntu host.
+- Keep the QEMU Guest Agent configured for automatic startup so virtualization integration remains available after reboot.
+- Complete Windows updates and create a clean-install snapshot before adding security tooling.
 
-## UEFI Boot Manager
+## Skills Demonstrated
 
+- Windows 11 deployment.
+- Linux administration.
+- QEMU/KVM virtualization.
+- Virtual machine configuration.
+- VirtIO driver management.
+- QEMU Guest Agent installation.
+- UEFI boot troubleshooting.
+- Technical documentation.
+- Problem solving.
 
-After creating the virtual machine, the system initially booted into the UEFI Boot Manager instead of automatically launching the Windows installer.
-
-
-### Resolution
-
-
-Selected the Windows installation media from the boot menu and successfully launched the Windows Setup process.
-
-
----
-
-
-## Guest Agent Installation
-
-
-Initially attempted to install the QEMU Guest Agent by downloading the Windows executable on the Ubuntu host, which failed because Linux cannot execute Windows `.exe` installers.
-
-
-### Resolution
-
-
-Downloaded and mounted the `virtio-win.iso` image, attached it to the virtual machine, opened the VirtIO CD within Windows, and installed the guest tools successfully. Verified installation by confirming the **QEMU Guest Agent** service was running with an **Automatic** startup type.
-
-
----
-
-
-# Lessons Learned
-
-
-- Learned how to deploy a Windows virtual machine using QEMU/KVM and Virtual Machine Manager.
-
-- Gained a better understanding of UEFI firmware and virtual machine boot processes.
-
-- Learned the purpose of the VirtIO driver package and QEMU Guest Agent.
-
-- Reinforced troubleshooting techniques by identifying and correcting installation issues related to virtualization tools.
-
-
----
-
-
-# Skills Demonstrated
-
-
-- Windows 11 Deployment
-
-- Linux Administration
-
-- QEMU/KVM Virtualization
-
-- Virtual Machine Configuration
-
-- VirtIO Driver Management
-
-- QEMU Guest Agent Installation
-
-- UEFI Boot Troubleshooting
-
-- Technical Documentation
-
-- Problem Solving
-
-
----
-
-
-# Screenshots
-
-
-- Windows Setup
-
-- Windows installation progress
-
-- Initial Windows desktop
-
-- Virtual Machine Manager configuration
-
-- VirtIO ISO mounted
-
-- QEMU Guest Agent service running
-
-
----
-
-
-# Next Steps
-
-
-- Complete all Windows Updates.
-
-- Create a **Clean-Install** virtual machine snapshot.
-
-- Install Microsoft Sysmon.
-
-- Deploy a production-ready Sysmon configuration.
-
-- Install the Wazuh Agent.
-
-- Verify Windows event logs are successfully collected.
-
-
----
-
-
-# Summary
-
-
-Day 2 established the first Windows endpoint within the Enterprise SOC Home Lab. The workstation was successfully deployed, network connectivity was verified, and virtualization integration was completed through the installation of the QEMU Guest Agent. This endpoint now serves as the foundation for deploying endpoint security tooling, collecting telemetry, and conducting future detection engineering and incident response exercises.
-
-
-## Lab Status
-
+## Current Status
 
 | Component | Status |
+|---|---|
+| Ubuntu host | Complete |
+| GitHub repository | Complete |
+| KVM/libvirt | Complete |
+| Windows 11 Enterprise | Complete |
+| QEMU Guest Agent | Complete |
+| Windows updates | Pending |
+| Clean-install snapshot | Pending |
+| Sysmon | Pending |
+| Wazuh Agent | Pending |
+| Active Directory | Pending |
 
-|----------|--------|
+## Next Steps
 
-| Ubuntu Host | ✅ Complete |
+1. Complete all Windows updates.
+2. Create a **Clean-Install** virtual machine snapshot.
+3. Install Microsoft Sysmon.
+4. Deploy a production-ready Sysmon configuration.
+5. Install the Wazuh Agent.
+6. Verify that Windows event logs are successfully collected.
 
-| GitHub Repository | ✅ Complete |
+---
 
-| KVM/libvirt | ✅ Complete |
-
-| Windows 11 Enterprise | ✅ Complete |
-
-| QEMU Guest Agent | ✅ Complete |
-
-| Windows Updates | ⏳ Pending |
-
-| Snapshot | ⏳ Pending |
-
-| Sysmon | ⏳ Pending |
-
-| Wazuh Agent | ⏳ Pending |
-
-| Active Directory | ⏳ Pending |
+[← Previous day](Day01.md) · [Documentation index](README.md) · [Next day →](Day03.md)

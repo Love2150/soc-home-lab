@@ -1,44 +1,90 @@
-# Day 3 - Sysmon Installation & Endpoint Telemetry
+# Day 3 — Sysmon Installation and Endpoint Telemetry
 
-**Date:** July 22, 2026 
-**Duration:** 1 Hour
+| Field | Value |
+|---|---|
+| Date | 2026-07-22 |
+| Status | Complete |
+| Phase | Endpoint telemetry |
+| Duration | 1 hour |
 
----
+## Summary
 
-# Objective
+Microsoft Sysmon v15.21 was deployed to the Windows 11 Enterprise virtual machine with the SwiftOnSecurity configuration. After resolving a missing configuration file and the need for Administrator privileges, Sysmon loaded the configuration successfully and generated endpoint telemetry. Process Create events (Event ID 1) were validated and reviewed for executable, parent-process, command-line, user, integrity-level, hash, process GUID, and timestamp data.
 
-Deploy Microsoft Sysmon to the Windows 11 virtual machine using the SwiftOnSecurity configuration, verify endpoint telemetry generation, and analyze the first process creation events.
+## Objectives
 
----
+- [x] Deploy Microsoft Sysmon to the Windows 11 virtual machine using the SwiftOnSecurity configuration.
+- [x] Verify that the endpoint generated Sysmon telemetry.
+- [x] Generate and analyze initial Process Create events.
 
-# Environment
+## Environment
 
 | Component | Details |
-|-----------|---------|
+|---|---|
 | Host OS | Ubuntu |
 | Guest OS | Windows 11 Enterprise |
 | Virtualization | QEMU/KVM |
-| Tool | Microsoft Sysmon v15.21 |
-| Configuration | SwiftOnSecurity Sysmon Configuration |
+| Security tooling | Microsoft Sysmon v15.21 |
+| Configuration | SwiftOnSecurity Sysmon Configuration (`sysmonconfig-export.xml`) |
 
----
+## Work Completed
 
-# Tasks Completed
+- Downloaded Microsoft Sysmon.
+- Downloaded the SwiftOnSecurity Sysmon configuration.
+- Installed Sysmon from an Administrator Command Prompt.
+- Applied the Sysmon XML configuration.
+- Verified successful installation and configuration loading.
+- Opened Event Viewer and navigated to **Microsoft → Windows → Sysmon → Operational**.
+- Generated test activity with Notepad, Calculator, and PowerShell.
+- Confirmed Process Create logging through Event ID 1.
+- Reviewed the fields recorded in Sysmon events.
 
-- [x] Downloaded Microsoft Sysmon
-- [x] Downloaded SwiftOnSecurity Sysmon configuration
-- [x] Installed Sysmon as Administrator
-- [x] Applied Sysmon XML configuration
-- [x] Verified successful installation
-- [x] Opened Event Viewer
-- [x] Navigated to Microsoft → Windows → Sysmon → Operational
-- [x] Generated Process Create events
-- [x] Verified Event ID 1 logging
-- [x] Reviewed Sysmon event details
+## Implementation and Validation
 
----
+### Sysmon deployment
 
-# Commands Used
+Sysmon v15.21 was installed on the Windows 11 Enterprise guest from `C:\Users\SOCAdmin\Downloads\Sysmon`. The installation command accepted the Sysmon license agreement, installed the service, and loaded `sysmonconfig-export.xml`.
+
+The applied configuration enabled process creation logging, DNS query logging, and hash logging.
+
+| Setting | Value |
+|---|---|
+| Sysmon version | 15.21 |
+| Configuration file | `sysmonconfig-export.xml` |
+| Configuration status | Successfully loaded |
+| Process creation logging | Enabled |
+| DNS query logging | Enabled |
+| Hash logging | Enabled |
+
+### Telemetry generation and validation
+
+Event Viewer was opened at **Microsoft → Windows → Sysmon → Operational**. Notepad, Calculator, and PowerShell were launched to generate test telemetry. Event ID 1 entries confirmed that Process Create logging was operational.
+
+The reviewed Process Create event exposed the following artifacts:
+
+- Process image
+- Parent process (`ParentImage`)
+- Command line
+- User account
+- SHA256 hash
+- Integrity level
+- Process GUID
+- Timestamp
+
+These fields provide the context needed to reconstruct process execution chains during endpoint investigations.
+
+### Key event IDs observed
+
+| Event ID | Description |
+|---|---|
+| 1 | Process Create |
+| 4 | Sysmon Service Started |
+| 16 | Sysmon Configuration Changed |
+| 22 | DNS Query |
+
+## Commands and Queries
+
+The commands were run in this order from an Administrator Command Prompt:
 
 ```cmd
 cd C:\Users\SOCAdmin\Downloads\Sysmon
@@ -52,116 +98,63 @@ calc.exe
 powershell.exe
 ```
 
----
+## Evidence
 
-# Configuration
+- Screenshot 1 documented successful Sysmon installation.
+- Screenshot 2 showed Event Viewer at **Microsoft → Windows → Sysmon → Operational**.
+- Screenshot 3 showed a Process Create event (Event ID 1).
+- Screenshot 4 showed the event fields `Image`, `ParentImage`, `CommandLine`, `User`, SHA256 hash, and integrity level.
+- Screenshot 5 documented test events generated with Notepad, Calculator, and PowerShell.
 
-| Setting | Value |
-|----------|-------|
-| Sysmon Version | 15.21 |
-| Configuration File | sysmonconfig-export.xml |
-| Configuration Status | Successfully Loaded |
-| Process Creation Logging | Enabled |
-| DNS Query Logging | Enabled |
-| Hash Logging | Enabled |
+## Challenges and Troubleshooting
 
----
+| Problem | Investigation | Resolution or status |
+|---|---|---|
+| Sysmon initially failed to load. | The XML configuration file was not present in the installation directory. | Downloaded the correct configuration file. |
+| Sysmon could not be installed without elevated permissions. | Installation required an administrative shell. | Launched Command Prompt with Administrator privileges and completed the installation successfully. |
 
-# Screenshots
+## Findings and Analyst Notes
 
-## Screenshot 1
-- Sysmon installation completed successfully
+- Sysmon provided more detailed endpoint telemetry than standard Windows Event Logs.
+- Process creation telemetry recorded command-line arguments, parent-child process relationships, user accounts, integrity levels, and cryptographic hashes.
+- The observed fields can help SOC analysts identify suspicious activity, determine how a process was executed, and reconstruct process execution chains.
+- Event ID 1 confirmed that Process Create telemetry was being collected after installation.
 
-## Screenshot 2
-- Event Viewer
-- Microsoft → Windows → Sysmon → Operational
+## Decisions
 
-## Screenshot 3
-- Event ID 1 (Process Create)
+- Used the SwiftOnSecurity Sysmon configuration for the deployment.
+- Used Notepad, Calculator, and PowerShell to generate known test processes for validation.
+- Validated telemetry directly in the Sysmon Operational log in Event Viewer.
 
-## Screenshot 4
-Event fields displayed:
+## Skills Demonstrated
 
-- Image
-- ParentImage
-- CommandLine
-- User
-- SHA256 Hash
-- Integrity Level
+- Windows administration
+- Endpoint monitoring
+- Microsoft Sysmon deployment
+- Event Viewer navigation
+- Process analysis
+- Basic digital forensics
+- Windows telemetry collection
 
-## Screenshot 5
-Generated test events using:
+## Current Status
 
-- Notepad
-- Calculator
-- PowerShell
+| Component | Status |
+|---|---|
+| Sysmon v15.21 installation | Complete |
+| SwiftOnSecurity configuration | Complete |
+| Process creation logging | Operational |
+| DNS query logging | Enabled |
+| Hash logging | Enabled |
+| Event ID 1 validation | Complete |
 
----
+## Next Steps
 
-# Challenges Encountered
-
-Initially, Sysmon failed to load because the XML configuration file was not present in the installation directory. After downloading the correct configuration file, the installation required launching Command Prompt with Administrator privileges before Sysmon could be installed successfully.
-
----
-
-# Lessons Learned
-
-Sysmon provides significantly more detailed endpoint telemetry than standard Windows Event Logs. Process creation events include valuable forensic information such as command-line arguments, parent-child process relationships, user accounts, integrity levels, and cryptographic hashes. This information is commonly used by SOC analysts during investigations to identify suspicious activity and determine how a process was executed.
-
----
-
-# Skills Demonstrated
-
-- Windows Administration
-- Endpoint Monitoring
-- Microsoft Sysmon Deployment
-- Event Viewer Navigation
-- Process Analysis
-- Basic Digital Forensics
-- Windows Telemetry Collection
+1. Study common Sysmon event IDs.
+2. Learn parent-child process analysis.
+3. Perform basic threat hunting with Event Viewer.
+4. Identify suspicious PowerShell activity.
+5. Prepare Sysmon logs for SIEM ingestion.
 
 ---
 
-# Key Event IDs Observed
-
-| Event ID | Description |
-|----------|-------------|
-| 1 | Process Create |
-| 4 | Sysmon Service Started |
-| 16 | Sysmon Configuration Changed |
-| 22 | DNS Query |
-
----
-
-# Investigation Notes
-
-The Process Create event included the following artifacts:
-
-- Process Image
-- Parent Process
-- Command Line
-- User Account
-- SHA256 Hash
-- Integrity Level
-- Process GUID
-- Timestamp
-
-These fields provide critical context during endpoint investigations and allow analysts to reconstruct process execution chains.
-
----
-
-# Next Steps
-
-- Study common Sysmon Event IDs
-- Learn parent-child process analysis
-- Perform basic threat hunting using Event Viewer
-- Identify suspicious PowerShell activity
-- Prepare Sysmon logs for SIEM ingestion
-
----
-
-# Summary
-
-Today I successfully deployed Microsoft Sysmon to my Windows 11 virtual machine using the SwiftOnSecurity configuration. After resolving issues with the configuration file and administrative permissions, I verified that Sysmon was generating endpoint telemetry. I confirmed Process Create (Event ID 1) events and analyzed important fields including the executable path, parent process, command line, user account, integrity level, and SHA256 hash. This lab demonstrated how Sysmon enhances Windows logging and provides the detailed telemetry that SOC analysts use for threat detection, incident response, and digital forensic investigations.
-
----
+[← Previous day](Day02.md) · [Documentation index](README.md) · [Next day →](Day04.md)

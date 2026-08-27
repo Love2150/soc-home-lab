@@ -1,154 +1,95 @@
-SOC Home Lab Progress Write-Up
+# Day 6 — Wazuh and Sysmon Integration
 
-Wazuh + Sysmon Integration and Threat Hunting Validation
+| Field | Value |
+|---|---|
+| Date | 2026-08-16 |
+| Status | Complete |
+| Phase | Wazuh and Sysmon integration |
 
-Date: August 16, 2026
-Environment: SPC Home Lab
-Primary Endpoint: WIN11-CLIENT01
-Wazuh Manager: Ubuntu host grim50reaper-HP-Laptop-15-dy1xxx
-Windows Domain: soclab.local
+## Summary
 
+This session replaced the stalled Windows Event Forwarding (WEF) path with direct Sysmon collection through the Wazuh agent. The Wazuh all-in-one deployment was rebuilt, `WIN11-CLIENT01` was registered, the manager address was corrected, and the Sysmon Operational channel was added to the agent configuration. Local event checks, manager archive output, dashboard alerts, and a DQL search confirmed the end-to-end telemetry pipeline.
 
-1. Session Objective
+The session then moved from infrastructure troubleshooting into SOC analysis by reviewing a Sysmon Event ID 1 alert for `net user`. The alert was treated as an investigative lead rather than proof of compromise. The lab stopped with Wazuh and Sysmon operational, WEF discontinued for now, and the endpoint ready for practical threat-hunting exercises.
 
-The goal of this session was to move past the Windows Event Forwarding (WEF) troubleshooting from the previous lab work and establish a reliable endpoint telemetry pipeline using:
+## Objectives
 
-Sysmon → Wazuh Agent → Wazuh Manager → Wazuh Dashboard
+- [x] Rebuild and validate the Wazuh manager stack.
+- [x] Install and register the Wazuh agent on `WIN11-CLIENT01` without relying on Internet access from the VM.
+- [x] Configure direct collection of the Sysmon Operational event channel.
+- [x] Validate telemetry locally, at the manager, and in the Wazuh dashboard.
+- [x] Use DQL to find Sysmon process-creation events.
+- [x] Perform an initial investigation of a Sysmon Event ID 1 alert.
+- [x] Record the engineering decision to stop WEF troubleshooting and use direct Wazuh agent collection.
 
-The priority was to get back to practical SOC investigation work instead of continuing to spend time troubleshooting WEF.
+## Environment
 
+| Component | Details |
+|---|---|
+| Lab | SOC Home Lab |
+| Wazuh host | Ubuntu host `grim50reaper-HP-Laptop-15-dy1xxx` |
+| Wazuh components | Wazuh Manager, Indexer, and Dashboard |
+| Windows endpoint | `WIN11-CLIENT01` / `WIN11-CLIENT01.soclab.local` |
+| Windows domain | `soclab.local` |
+| Manager address used by the Windows VM | `192.168.122.1` |
+| Dashboard address | `https://192.168.1.136` |
+| Endpoint telemetry | Sysmon through the Wazuh agent |
 
-2. Previous Stopping Point
+## Work Completed
 
-The previous lab session focused heavily on Windows Event Forwarding. The WEF subscription could be created and showed as active, but the Windows client remained in a Trying state and continued returning WinRM-related errors.
+- Rebuilt the failed Wazuh installation with the Wazuh all-in-one installer.
+- Verified the Wazuh Manager, Indexer, and Dashboard services.
+- Hosted the Wazuh MSI from Ubuntu and downloaded it to the offline Windows 11 VM.
+- Installed and started the Windows Wazuh service.
+- Corrected the agent manager address from `192.168.1` to `192.168.122.1`.
+- Confirmed that `WIN11-CLIENT01` registered with the manager and became active.
+- Added the Sysmon Operational channel to `ossec.conf` and restarted the agent.
+- Validated Sysmon Event ID 1 locally on Windows.
+- Temporarily enabled Wazuh JSON archive logging to validate manager-side ingestion.
+- Confirmed Windows endpoint alerts in the Wazuh Threat Hunting interface.
+- Used DQL to locate Sysmon Event ID 1 records.
+- Opened and assessed a discovery alert involving `net user`.
 
-Several areas had already been tested during troubleshooting, including:
+## Implementation and Validation
 
-● Domain membership and Group Policy
+### Wazuh manager rebuild
 
-● DNS and time synchronization
+The previous Wazuh installation on Ubuntu had service-startup problems, so it was rebuilt from scratch with the Wazuh all-in-one installation. The Manager, Indexer, and Dashboard services each returned `active` after installation.
 
-● WinRM connectivity
+The Ubuntu host had multiple network interfaces. Windows VM communication used the libvirt address `192.168.122.1`, while the dashboard was accessed from the Ubuntu host at `https://192.168.1.136`.
 
-● Kerberos/SPN-related configuration
+### Windows agent installation and address correction
 
-● Source-initiated and collector-initiated subscriptions
+`WIN11-CLIENT01` did not have Internet access. The Wazuh agent installer was therefore downloaded on Ubuntu, served from `192.168.122.1:8000`, and transferred locally to the VM. `Get-Service WazuhSvc` showed the service as `Running` after installation.
 
-Because WEF was consuming too much lab time without producing reliable results, the decision was made to stop troubleshooting WEF and use the Wazuh agent to collect Sysmon telemetry directly from the Windows endpoint.
-
-
-3. Wazuh Manager Rebuild
-
-The previous Wazuh installation on Ubuntu had service startup problems, so the manager was rebuilt from scratch using the Wazuh all-in-one installation.
-
-After installation, the following services were verified as active:
-
-```bash
-sudo systemctl is-active wazuh-manager
-sudo systemctl is-active wazuh-indexer
-sudo systemctl is-active wazuh-dashboard
-```
-
-All three services returned:
-
-```text
-active
-```
-
-Wazuh Manager Network Address
-
-The Ubuntu host had multiple interfaces. The libvirt address used for Windows VM communication was:
-
-```text
-192.168.122.1
-```
-
-The dashboard was accessed from the Ubuntu host using:
-
-```text
-https://192.168.1.136
-```
-
-
-4. Windows Wazuh Agent Installation
-
-The Windows 11 VM did not have Internet access, so the Wazuh agent installer was downloaded on Ubuntu and transferred locally to the Windows VM.
-
-The installer was served from Ubuntu using:
-
-```bash
-python3 -m http.server 8000 --bind 192.168.122.1
-```
-
-The Windows client successfully downloaded the Wazuh MSI.
-
-The Wazuh service was installed and verified with:
-
-```powershell
-Get-Service WazuhSvc
-```
-
-The service showed:
-
-```text
-Running
-```
-
-
-5. Wazuh Manager Address Correction
-
-The agent was initially installed with an incorrect manager address:
+The agent was initially configured with the incomplete manager address:
 
 ```xml
 <address>192.168.1</address>
 ```
 
-The configuration was corrected to:
+The address was corrected to:
 
 ```xml
 <address>192.168.122.1</address>
 ```
 
-The service was then restarted.
-
-The agent log confirmed successful communication with the manager:
+After the service was restarted, the agent log reported:
 
 ```text
 wazuh-agent: INFO: Agent is now online. Process unlocked, continuing...
 ```
 
-
-6. Agent Registration Validation
-
-On the Ubuntu Wazuh manager, the following command was used:
-
-```bash
-sudo /var/ossec/bin/agent_control -l
-```
-
-The result showed:
+Manager-side registration validation returned the local server and the active Windows endpoint:
 
 ```text
 ID: 000, Name: grim50reaper-HP-Laptop-15-dy1xxx (server), IP: 127.0.0.1, Active/Local
 ID: 001, Name: WIN11-CLIENT01, IP: any, Active
 ```
 
-Result
+### Sysmon event-channel configuration
 
-WIN11-CLIENT01 was successfully registered and communicating with the Wazuh manager.
-
-Status: ACTIVE
-
-
-7. Sysmon Integration
-
-The Windows Wazuh agent configuration was updated to collect the Sysmon Operational event channel directly.
-
-The following block was added to:
-
-```text
-C:\Program Files (x86)\ossec-agent\ossec.conf
-```
+The Windows Wazuh agent was configured to collect the Sysmon Operational event channel directly. The following block was added to `C:\Program Files (x86)\ossec-agent\ossec.conf`:
 
 ```xml
 <localfile>
@@ -157,49 +98,21 @@ C:\Program Files (x86)\ossec-agent\ossec.conf
 </localfile>
 ```
 
-The Wazuh agent was restarted:
+The Wazuh agent was restarted after the configuration change.
 
-```powershell
-Restart-Service WazuhSvc
-```
+### Local Sysmon validation
 
+A local Windows event query returned multiple process-creation records with Event ID 1 from `Microsoft-Windows-Sysmon`. This established that Sysmon itself was operating and writing process events before manager-side ingestion was assessed.
 
-8. Sysmon Local Validation
+### End-to-end telemetry validation
 
-Sysmon events were verified directly on WIN11-CLIENT01 using:
-
-```powershell
-Get-WinEvent -LogName "Microsoft-Windows-Sysmon/Operational" -MaxEvents 5 |
-Select-Object TimeCreated,Id,ProviderName
-```
-
-The output showed multiple:
-
-```text
-Event ID: 1
-Provider: Microsoft-Windows-Sysmon
-```
-
-Result
-
-Sysmon was operating correctly and recording process creation events locally.
-
-
-9. End-to-End Telemetry Validation
-
-To prove that all Sysmon events were reaching the Wazuh manager, temporary JSON archive logging was enabled on the manager:
+Temporary JSON archive logging was enabled on the Wazuh manager with:
 
 ```xml
 <logall_json>yes</logall_json>
 ```
 
-After restarting the Wazuh manager, the archive was monitored with:
-
-```bash
-sudo tail -f /var/ossec/logs/archives/archives.json | grep -i sysmon
-```
-
-The manager displayed Sysmon JSON events containing:
+After the manager restart, `archives.json` showed records containing:
 
 ```text
 Microsoft-Windows-Sysmon
@@ -207,7 +120,7 @@ Microsoft-Windows-Sysmon/Operational
 EventID: 1
 ```
 
-Confirmed Pipeline
+This confirmed the following pipeline:
 
 ```text
 WIN11-CLIENT01
@@ -223,120 +136,135 @@ Wazuh Indexer
 Wazuh Dashboard
 ```
 
-Status: OPERATIONAL
+The pipeline status was operational. Archive logging was used only for validation and can remain disabled during normal lab operation to avoid unnecessary disk usage.
 
-Archive logging was only used for validation and can remain disabled during normal lab operation to avoid unnecessary disk usage.
+### Dashboard and DQL validation
 
-
-10. Wazuh Dashboard Access
-
-The Wazuh dashboard was successfully accessed at:
-
-```text
-https://192.168.1.136
-```
-
-The Threat Hunting interface showed alerts from WIN11-CLIENT01.
-
-The endpoint filter used was:
+The Wazuh dashboard was available at `https://192.168.1.136`. The Threat Hunting interface displayed alerts from `WIN11-CLIENT01` after a high-severity-only filter was removed. The endpoint filter was:
 
 ```text
 agent.name:"WIN11-CLIENT01"
 ```
 
-Once a high-severity-only filter was removed, the dashboard displayed dozens of alerts from the Windows endpoint.
-
-
-11. DQL Threat Hunting
-
-DQL was successfully used to search Wazuh alerts.
-
-Example query:
+A DQL query for Sysmon process creation returned telemetry in the Wazuh Events view and allowed records to be expanded for investigation:
 
 ```text
 agent.name:"WIN11-CLIENT01" AND data.win.system.eventID:1
 ```
 
-The Wazuh Events view returned Sysmon telemetry and allowed individual records to be expanded for investigation.
+## Commands and Queries
 
+### Wazuh service validation on Ubuntu
 
-12. First Sysmon Investigation
-
-A Sysmon Event ID 1 process creation alert was opened in Wazuh.
-
-Endpoint
-
-```text
-WIN11-CLIENT01.soclab.local
+```bash
+sudo systemctl is-active wazuh-manager
+sudo systemctl is-active wazuh-indexer
+sudo systemctl is-active wazuh-dashboard
 ```
 
-Event
+Expected result for each service:
 
 ```text
-Sysmon Event ID: 1
-Provider: Microsoft-Windows-Sysmon
+active
 ```
 
-Process
+### Serve the Wazuh agent installer to the Windows VM
+
+```bash
+python3 -m http.server 8000 --bind 192.168.122.1
+```
+
+### Verify and restart the Windows Wazuh service
+
+```powershell
+Get-Service WazuhSvc
+Restart-Service WazuhSvc
+```
+
+### Validate agent registration on the manager
+
+```bash
+sudo /var/ossec/bin/agent_control -l
+```
+
+### Validate local Sysmon events
+
+```powershell
+Get-WinEvent -LogName "Microsoft-Windows-Sysmon/Operational" -MaxEvents 5 |
+Select-Object TimeCreated,Id,ProviderName
+```
+
+### Monitor temporary manager archive output
+
+```bash
+sudo tail -f /var/ossec/logs/archives/archives.json | grep -i sysmon
+```
+
+### Wazuh dashboard filters
 
 ```text
-C:\Windows\SysWOW64\net1.exe
+agent.name:"WIN11-CLIENT01"
 ```
-
-Command Line
 
 ```text
-C:\WINDOWS\system32\net1 user
+agent.name:"WIN11-CLIENT01" AND data.win.system.eventID:1
 ```
 
-Parent Process
+## Evidence
 
-```text
-C:\Windows\SysWOW64\net.exe
-```
+### Service and agent state
 
-Parent Command Line
+- Wazuh Manager, Indexer, and Dashboard returned `active`.
+- `Get-Service WazuhSvc` returned `Running`.
+- The agent log stated that the agent was online.
+- `agent_control -l` showed `WIN11-CLIENT01` as `Active` with agent ID `001`.
 
-```text
-net user
-```
+### Source and ingestion validation
 
-User
+- The local Sysmon Operational channel returned Event ID 1 records from `Microsoft-Windows-Sysmon`.
+- Wazuh manager archive output contained the Sysmon provider, channel, and Event ID 1.
+- The Threat Hunting view showed dozens of endpoint alerts after the high-severity-only filter was removed.
+- The DQL process-creation query returned expandable Sysmon events.
 
-```text
-NT AUTHORITY\SYSTEM
-```
+### First Sysmon investigation record
 
-Wazuh Detection
+| Field | Value |
+|---|---|
+| Endpoint | `WIN11-CLIENT01.soclab.local` |
+| Event | Sysmon Event ID 1 |
+| Provider | `Microsoft-Windows-Sysmon` |
+| Process | `C:\Windows\SysWOW64\net1.exe` |
+| Command line | `C:\WINDOWS\system32\net1 user` |
+| Parent process | `C:\Windows\SysWOW64\net.exe` |
+| Parent command line | `net user` |
+| User | `NT AUTHORITY\SYSTEM` |
+| Wazuh rule ID | `92031` |
+| Rule level | `3` |
+| Rule description | `Discovery activity executed` |
+| Rule groups | `sysmon`, `sysmon_eid1_detections`, `windows` |
 
-```text
-Rule ID: 92031
-Rule Level: 3
-Rule Description: Discovery activity executed
-Rule Groups: sysmon, sysmon_eid1_detections, windows
-```
+## Challenges and Troubleshooting
 
+| Problem | Investigation | Resolution or status |
+|---|---|---|
+| WEF client remained in `Trying` state with WinRM-related errors | Tested domain membership, Group Policy, DNS, time synchronization, WinRM connectivity, Kerberos/SPN-related configuration, and both source-initiated and collector-initiated subscriptions | WEF was discontinued for now because it consumed substantial lab time without becoming reliable. Sysmon collection moved to the Wazuh agent. |
+| Existing Wazuh installation had service-startup problems | Replaced the installation and checked all three Wazuh services | Rebuilt with the all-in-one installation; Manager, Indexer, and Dashboard became operational. |
+| Windows VM had no Internet access | Hosted the MSI from Ubuntu over the libvirt network | Agent installer transferred successfully from `192.168.122.1:8000`. |
+| Agent was installed with `<address>192.168.1</address>` | Reviewed and corrected the Wazuh agent configuration | Changed the manager address to `192.168.122.1`; the agent came online and registered as active. |
+| Dashboard initially showed limited results | Removed the high-severity-only filter | Dozens of alerts from `WIN11-CLIENT01` became visible. |
+| Domain trust warning remains | Warning states: `The trust relationship between this workstation and the primary domain failed.` | Unresolved but non-blocking for Wazuh and Sysmon telemetry; defer unless it blocks a future objective. |
 
-13. Initial Analyst Assessment
+## Findings and Analyst Notes
 
-The command:
+### Initial process-creation assessment
 
-```text
-net user
-```
+The command `net user` enumerates Windows user accounts. It can represent legitimate administrative activity, but it is also associated with attacker discovery and reconnaissance. Wazuh classified the event as `Discovery activity executed`, but the event alone was not sufficient to classify the activity as malicious.
 
-is commonly used to enumerate Windows user accounts.
+The alert therefore requires context from the process chain, executing account, and nearby events. This is the distinction between reviewing a detection and completing an investigation.
 
-This behavior can be legitimate administrative activity, but it is also commonly observed during attacker discovery and reconnaissance.
+### Surrounding activity
 
-The event alone was not enough to classify the activity as malicious.
-
-The investigation therefore moved to surrounding activity to establish context.
-
-
-14. Surrounding Activity Observed
-
-Additional activity near the net user event included:
+Nearby activity included:
 
 ```text
 net.exe / net1.exe
@@ -344,185 +272,92 @@ powershell.exe
 secedit.exe
 ```
 
-A Sysmon Event ID 11 file creation event was also observed involving a path under:
+A Sysmon Event ID 11 file-creation event was also observed under:
 
 ```text
 C:\Windows\SystemTemp\
 ```
 
-The activity was running under:
+The activity ran as:
 
 ```text
 NT AUTHORITY\SYSTEM
 ```
 
-This provides a useful investigation chain for future timeline analysis.
-
-At this stage, the activity should be treated as requiring context, not automatically malicious.
-
-
-15. Key SOC Skills Practiced
-
-This session provided hands-on experience with:
-
-● Deploying and validating a Wazuh endpoint agent
-
-● Troubleshooting SIEM agent connectivity
-
-● Configuring Windows Event Channel collection
-
-● Sending Sysmon telemetry to a SIEM
-
-● Validating telemetry at both the source and manager
-
-● Accessing and navigating the Wazuh dashboard
-
-● Filtering endpoint telemetry
-
-● Writing DQL queries
-
-● Investigating Sysmon Event ID 1
-
-● Reviewing command-line execution
-
-● Identifying parent/child process relationships
-
-● Reviewing process execution under NT AUTHORITY\SYSTEM
-
-● Building an investigation timeline from surrounding events
-
-● Distinguishing a detection from a confirmed security incident
-
-
-16. Important Lesson
-
-A SIEM alert does not automatically mean a system is compromised.
-
-The Wazuh rule identified:
-
-```text
-Discovery activity executed
-```
-
-because net user is behavior associated with account discovery.
-
-A SOC analyst still needs to answer:
-
-● What process launched the command?
-
-● What account executed it?
-
-● What occurred before it?
-
-● What occurred after it?
-
-● Is the behavior expected on this system?
-
-● Are there additional suspicious commands in the same process chain?
-
-This is the difference between alert review and investigation.
-
-
-17. Known Issue
-
-The Windows client continues to display domain trust-related warnings involving:
-
-```text
-The trust relationship between this workstation and the primary domain failed.
-```
-
-This issue is currently not blocking Wazuh or Sysmon telemetry.
-
-Because the core SOC telemetry pipeline is functioning, the domain trust issue will not be worked unless it blocks a future lab objective.
-
-
-18. Windows Server Plan
-
-The Windows Server created earlier will still be used in the lab.
-
-It will no longer be used primarily as the WEF collector.
-
-Planned roles include:
-
-● Active Directory / domain services
-
-● Windows Security event generation
-
-● Authentication monitoring
-
-● Account and group activity
-
-● A second Windows system monitored by Wazuh
-
-● Future workstation-to-server attack and investigation scenarios
-
-The next infrastructure step involving the server should be installing the Wazuh agent and collecting its Windows Security events.
-
-
-Current Lab Status
-
-|Component                      |Status                       |
-|-------------------------------|-----------------------------|
-|Ubuntu Wazuh Manager           |✅ Operational                |
-|Wazuh Indexer                  |✅ Operational                |
-|Wazuh Dashboard                |✅ Operational                |
-|WIN11-CLIENT01 Wazuh Agent     |✅ Active                     |
-|Sysmon                         |✅ Operational                |
-|Sysmon → Wazuh ingestion       |✅ Confirmed                  |
-|Wazuh Threat Hunting           |✅ Working                    |
-|DQL queries                    |✅ Working                    |
-|Sysmon Event ID 1 investigation|✅ Working                    |
-|Windows Server                 |⏳ Future integration         |
-|WEF                            |⚠️ Discontinued for now       |
-|Domain trust warning           |⚠️ Unresolved but non-blocking|
-
-
-Stopping Point
-
-This is a strong stopping point for the session.
-
-The core lab infrastructure is now operational, and the environment has transitioned from setup/troubleshooting into actual SOC investigation work.
-
-The most important accomplishment is that we can now:
-
-```text
-Generate Windows activity
-        ↓
-Capture it with Sysmon
-        ↓
-Send it through the Wazuh agent
-        ↓
-Detect/index it in Wazuh
-        ↓
-Search it with DQL
-        ↓
-Investigate process and command-line activity
-```
-Next Session
-
-The next session should begin with the working environment exactly as it is now.
-
-Recommended next investigation sequence:
-
-1. Build a short timeline around the net user discovery alert.
-
-2. Examine the PowerShell and secedit.exe activity near the same timestamp.
-
+These records provide a useful chain for future timeline analysis, but they still require context and should not be labeled automatically as malicious.
+
+### Investigation questions retained for follow-up
+
+- What process launched the command?
+- What account executed it?
+- What occurred before it?
+- What occurred after it?
+- Is the behavior expected on this system?
+- Are additional suspicious commands present in the same process chain?
+
+### Analyst conclusion
+
+The telemetry and alerting pipeline worked as intended. The observed `net user` activity is a discovery lead that warrants timeline analysis; it is not, by itself, evidence that the endpoint was compromised.
+
+## Decisions
+
+- Stop WEF troubleshooting for now. The subscription could be created and appeared active, but the client remained in `Trying` state and the pipeline was unreliable.
+- Collect Sysmon directly from Windows with the Wazuh agent so the lab can prioritize practical SOC investigation work.
+- Use JSON archive logging only for end-to-end validation, then leave it disabled during normal operation to limit unnecessary disk usage.
+- Defer the domain trust warning because it does not block the core telemetry pipeline; revisit it only if it blocks a future lab objective.
+- Retain the Windows Server in the lab, but do not use it primarily as the WEF collector. Planned roles remain Active Directory/domain services, Windows Security event generation, authentication monitoring, account and group activity, a second Wazuh-monitored Windows system, and future workstation-to-server attack and investigation scenarios.
+
+## Skills Demonstrated
+
+- Deploying and validating a Wazuh endpoint agent
+- Troubleshooting SIEM agent connectivity
+- Configuring Windows Event Channel collection
+- Sending Sysmon telemetry to a SIEM
+- Validating telemetry at both the source and manager
+- Accessing and navigating the Wazuh dashboard
+- Filtering endpoint telemetry and writing DQL queries
+- Investigating Sysmon Event ID 1
+- Reviewing command-line execution and parent/child process relationships
+- Reviewing process execution under `NT AUTHORITY\SYSTEM`
+- Building an investigation timeline from surrounding events
+- Distinguishing a detection from a confirmed security incident
+
+## Current Status
+
+| Component | Status |
+|---|---|
+| Ubuntu Wazuh Manager | Operational |
+| Wazuh Indexer | Operational |
+| Wazuh Dashboard | Operational |
+| `WIN11-CLIENT01` Wazuh agent | Operational |
+| Sysmon | Operational |
+| Sysmon to Wazuh ingestion | Operational |
+| Wazuh Threat Hunting | Operational |
+| DQL queries | Operational |
+| Sysmon Event ID 1 investigation workflow | Operational |
+| Windows Server integration | Pending |
+| WEF | Discontinued |
+| Domain trust warning | Unresolved, non-blocking |
+
+The core lab infrastructure is operational, and the environment has moved from setup and troubleshooting into SOC investigation work. Windows activity can now be captured with Sysmon, sent through the Wazuh agent, indexed and detected in Wazuh, searched with DQL, and investigated through process and command-line context.
+
+Session completion state:
+
+- Lab telemetry pipeline: Complete
+- Wazuh/Sysmon integration: Complete
+- Threat Hunting validation: Complete
+- Ready for practical SOC investigations: Yes
+
+## Next Steps
+
+1. Build a short timeline around the `net user` discovery alert.
+2. Examine the nearby `powershell.exe` and `secedit.exe` activity.
 3. Practice distinguishing benign administrative behavior from suspicious discovery.
-
 4. Generate controlled Sysmon Event IDs 1, 3, 11, 13, and 22.
+5. Investigate those events through Wazuh Threat Hunting.
+6. Document the supporting evidence and analyst conclusions.
+7. After the endpoint investigation block, install the Wazuh agent on the Windows Server and collect its Windows Security events as a second monitored Windows host.
 
-5. Investigate those events using Wazuh Threat Hunting.
+---
 
-6. Document evidence and analyst conclusions.
-
-7. After completing the endpoint investigation block, add the Windows Server as a second Wazuh-monitored Windows host.
-
-
-Session Completion
-
-Lab telemetry pipeline: COMPLETE
-Wazuh/Sysmon integration: COMPLETE
-Threat Hunting validation: COMPLETE
-Ready for practical SOC investigations: YES
-
+[← Previous day](Day05.md) · [Documentation index](README.md) · [Next day →](Day07.md)

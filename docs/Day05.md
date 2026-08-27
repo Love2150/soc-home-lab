@@ -1,83 +1,60 @@
-Day 5 – Windows Event Forwarding Troubleshooting
+# Day 5 — Windows Event Forwarding Troubleshooting
 
-Objective
+| Field | Value |
+|---|---|
+| Date | Not recorded |
+| Status | Blocked |
+| Phase | Centralized Windows logging and WEF troubleshooting |
 
-The objective of Day 5 was to begin building a centralized Windows logging architecture using Windows Event Forwarding (WEF).
+## Summary
 
-The goal was to forward selected Sysmon events from WIN11-CLIENT01 to a Windows Server collector and review them in the Forwarded Events log.
+Day 5 began the build of a centralized Windows logging architecture using Windows Event Forwarding (WEF). A Windows Server 2022 collector was deployed, the Windows Event Collector (WEC) and WinRM paths were configured, and a collector-initiated subscription was created for selected Sysmon events from `WIN11-CLIENT01`.
 
+Testing validated network reachability, TCP 5985, WinRM authentication, remote access to the Sysmon Operational log, the Event Forwarding WinRM plugin, and the WEC subscription configuration. The subscription reported `Active` with `LastError: 0`, but its event source remained `Trying` and the Forwarded Events log remained empty. WEF was therefore not operational at the end of the session. The leading hypothesis was a workgroup authentication limitation, and the planned next step was to introduce Active Directory Domain Services (AD DS).
 
-Lab Environment
+## Objectives
 
-● Ubuntu 24.04 host
+- [x] Deploy a Windows Server collector on the same lab subnet as the Windows 11 endpoint.
+- [x] Initialize and validate the Windows Event Collector service.
+- [x] Configure and test WinRM between the collector and endpoint.
+- [x] Create a collector-initiated subscription for Sysmon Event IDs `1`, `3`, `13`, and `22`.
+- [x] Validate authenticated remote access to the Sysmon Operational log.
+- [ ] Forward Sysmon events into the collector's Forwarded Events log.
 
-● KVM/QEMU virtualization
+## Environment
 
-● WIN11-CLIENT01
+| Component | Details |
+|---|---|
+| Host | Ubuntu 24.04 |
+| Virtualization | KVM/QEMU; libvirt default NAT network |
+| Collector | `WINSRV-COLLECTOR01`, Windows Server 2022 Standard Evaluation (Desktop Experience), `192.168.122.129` |
+| Collector VM | 4096 MiB memory, 2 CPUs, 40 GiB disk |
+| Endpoint | `WIN11-CLIENT01`, Windows 11, `192.168.122.190` |
+| Security tooling | Sysmon; Microsoft-Windows-Sysmon/Operational log |
+| Collection tooling | Windows Event Collector, Windows Event Forwarding, WinRM, Event Viewer |
+| Authentication context | Workgroup systems using local account `WIN11-CLIENT01\SOCAdmin` with Negotiate/NTLM |
 
-● WINSRV-COLLECTOR01
+## Work Completed
 
-● Windows Server 2022 Standard Evaluation
+- Built `WINSRV-COLLECTOR01` as the centralized event collector.
+- Initialized the Windows Event Collector service and confirmed that `Wecsvc` was running.
+- Identified and corrected an ICMP firewall restriction on the collector.
+- Changed the endpoint network profile from Public to Private and enabled PowerShell remoting.
+- Validated WinRM by hostname and IP address.
+- Created the collector-initiated `SOC-Lab-Sysmon` subscription manually after the Event Viewer computer picker failed in the non-domain environment.
+- Replaced the unresolved hostname source with the endpoint IP address.
+- Configured `TrustedHosts` and allowed unencrypted HTTP for the isolated lab.
+- Restored the endpoint WinRM service to a running, automatic-start state.
+- Validated credentialed Negotiate authentication and remote Sysmon log access.
+- Verified that the Event Forwarding WinRM plugin was installed and enabled.
+- Reviewed subscription configuration and runtime state.
+- Documented the unresolved difference between the subscription's `Active` state and the source's `Trying` state.
 
-● Sysmon
+## Implementation and Validation
 
-● Windows Event Collector
+### Collector build and WEC initialization
 
-● WinRM
-
-● Windows Event Viewer
-
-
-Collector Build
-
-A new Windows Server 2022 virtual machine was created to act as the centralized event collector.
-
-VM Configuration
-
-● VM Name: WINSRV-COLLECTOR01
-
-● Operating System: Windows Server 2022 Standard Evaluation (Desktop Experience)
-
-● Memory: 4096 MiB
-
-● CPUs: 2
-
-● Disk: 40 GiB
-
-● Network: libvirt default NAT network
-
-The server received an address on the same subnet as the Windows 11 client.
-
-Example:
-
-```text
-WINSRV-COLLECTOR01
-192.168.122.129
-```
-
-The Windows 11 endpoint was:
-
-```text
-WIN11-CLIENT01
-192.168.122.190
-```
-
-
-Windows Event Collector Configuration
-
-The Windows Event Collector service was initialized with:
-
-```powershell
-wecutil qc
-```
-
-The service was verified with:
-
-```powershell
-Get-Service Wecsvc
-```
-
-Result:
+The Windows Server 2022 VM was placed on the same `192.168.122.0/24` lab subnet as the endpoint. WEC was initialized with `wecutil qc` and checked with `Get-Service Wecsvc`.
 
 ```text
 Status: Running
@@ -85,274 +62,62 @@ Name: Wecsvc
 DisplayName: Windows Event Collector
 ```
 
+This established that the collector service itself was available.
 
-Network Connectivity Testing
+### Network and firewall validation
 
-Initial ping testing from WIN11-CLIENT01 to the collector failed.
+Initial ping tests from `WIN11-CLIENT01` to the collector failed. An inbound ICMPv4 echo rule was added on the collector, after which ping succeeded. This isolated the initial failure to host firewall behavior rather than a broken virtual network path.
 
-The collector firewall was configured to allow ICMP echo requests:
-
-```powershell
-New-NetFirewallRule -DisplayName "SOC Lab - Allow ICMPv4 Echo" -Protocol ICMPv4 -IcmpType 8 -Direction Inbound -Action Allow
-```
-
-After the firewall rule was created, ping testing succeeded.
-
-Finding
-
-The failed ping was caused by host firewall behavior rather than a broken network path.
-
-This demonstrated the importance of distinguishing between:
-
-● Network connectivity problems
-
-● Host firewall restrictions
-
-● Service-level failures
-
-
-WinRM Configuration
-
-WinRM was enabled on WIN11-CLIENT01.
-
-Commands used included:
-
-```powershell
-winrm quickconfig
-```
-
-```powershell
-Get-Service WinRM
-```
-
-The client network profile was initially identified as:
-
-```text
-NetworkCategory: Public
-```
-
-It was changed to:
-
-```text
-NetworkCategory: Private
-```
-
-using:
-
-```powershell
-Set-NetConnectionProfile -InterfaceAlias "Ethernet" -NetworkCategory Private
-```
-
-PowerShell remoting was then enabled:
-
-```powershell
-Enable-PSRemoting -Force
-```
-
-WinRM connectivity was successfully verified using:
-
-```powershell
-Test-WSMan WIN11-CLIENT01
-```
-
-and later:
-
-```powershell
-Test-WSMan 192.168.122.190
-```
-
-
-WEF Subscription Creation
-
-The Event Viewer GUI was initially used to create a collector-initiated subscription named:
-
-```text
-SOC-Lab-Sysmon
-```
-
-The intended Sysmon Event IDs were:
-
-```text
-1,3,13,22
-```
-
-These represent:
-
-● Event ID 1 – Process Creation
-
-● Event ID 3 – Network Connection
-
-● Event ID 13 – Registry Value Set
-
-● Event ID 22 – DNS Query
-
-The GUI computer picker failed because it attempted to locate a domain computer object.
-
-The subscription was therefore created manually using XML and wecutil.
-
-The subscription was verified with:
-
-```powershell
-wecutil es
-```
-
-Result:
-
-```text
-SOC-Lab-Sysmon
-```
-
-
-Event Source Configuration
-
-The source was initially added by hostname:
-
-```text
-WIN11-CLIENT01
-```
-
-Runtime status showed:
-
-```text
-RunTimeStatus: Trying
-```
-
-with a hostname resolution related error.
-
-The hostname source was removed and replaced with the IP address:
-
-```text
-192.168.122.190
-```
-
-
-TrustedHosts and Workgroup WinRM Configuration
-
-Because the systems were operating in a workgroup rather than a domain, the collector was configured with TrustedHosts:
-
-```powershell
-Set-Item WSMan:\localhost\Client\TrustedHosts -Value "WIN11-CLIENT01,192.168.122.190" -Force
-```
-
-Verification:
-
-```powershell
-Get-Item WSMan:\localhost\Client\TrustedHosts
-```
-
-Result:
-
-```text
-WIN11-CLIENT01,192.168.122.190
-```
-
-Unencrypted HTTP was also enabled for this isolated lab:
-
-```powershell
-Set-Item WSMan:\localhost\Client\AllowUnencrypted -Value $true
-```
-
-Verification showed:
-
-```text
-AllowUnencrypted: true
-```
-
-
-WinRM Port Testing
-
-TCP connectivity to WinRM was verified with:
-
-```powershell
-Test-NetConnection 192.168.122.190 -Port 5985
-```
-
-Result:
+TCP connectivity from the collector to endpoint WinRM was then tested directly:
 
 ```text
 TcpTestSucceeded: True
 ```
 
-This confirmed that:
+The successful TCP 5985 test demonstrated that the endpoint was reachable and that WinRM traffic was not blocked at the network or host-firewall layer.
 
-● The endpoint was reachable
+### Endpoint WinRM configuration
 
-● TCP port 5985 was open
+The endpoint's network category was initially `Public`. It was changed to `Private`, after which PowerShell remoting was enabled. `Test-WSMan` succeeded first with `WIN11-CLIENT01` and later with `192.168.122.190`.
 
-● WinRM traffic was not being blocked at the network layer
+During later troubleshooting, the endpoint's WinRM service was found stopped. It was configured for automatic startup and restarted after elevation issues were corrected. A subsequent service check showed WinRM running.
 
+### WEF subscription creation
 
-WinRM Service Troubleshooting
+The Event Viewer GUI was initially used to create a collector-initiated subscription named `SOC-Lab-Sysmon`. The intended Sysmon event set was:
 
-During testing, WIN11-CLIENT01 showed:
+| Event ID | Sysmon event |
+|---|---|
+| 1 | Process Creation |
+| 3 | Network Connection |
+| 13 | Registry Value Set |
+| 22 | DNS Query |
 
-```text
-WinRM: Stopped
-```
+The GUI computer picker attempted to locate a domain computer object and failed because the systems were not domain joined. The subscription was therefore created manually with XML and `wecutil`. Enumeration with `wecutil es` returned `SOC-Lab-Sysmon`, confirming that the subscription object existed.
 
-The service was restarted and configured to start automatically.
+### Source addressing and workgroup configuration
 
-Commands:
+The source was initially configured as `WIN11-CLIENT01`. Runtime status remained `Trying` and reported a hostname-resolution-related error. The hostname source was removed and replaced with `192.168.122.190`.
 
-```powershell
-Set-Service WinRM -StartupType Automatic
-```
-
-```powershell
-Start-Service WinRM
-```
-
-```powershell
-Get-Service WinRM
-```
-
-After elevation issues were corrected, WinRM returned to a running state.
-
-
-Credentialed WinRM Testing
-
-A credential object was created securely:
-
-```powershell
-$cred = Get-Credential
-```
-
-The account used was:
+Because both systems were in a workgroup, the collector's `TrustedHosts` value was set to:
 
 ```text
-WIN11-CLIENT01\SOCAdmin
+WIN11-CLIENT01,192.168.122.190
 ```
 
-WinRM authentication was tested using:
+Unencrypted HTTP was also enabled for this isolated lab, and validation returned:
 
-```powershell
-Test-WSMan 192.168.122.190 -Authentication Negotiate -Credential $cred
+```text
+AllowUnencrypted: true
 ```
 
-The test succeeded.
+These changes removed hostname trust and transport-policy variables from the immediate troubleshooting path, but they did not cause WEF event delivery to begin.
 
-This confirmed:
+### Credentialed authentication and remote Sysmon validation
 
-● The account credentials were valid
+A credential object was created for `WIN11-CLIENT01\SOCAdmin`. Credentialed `Test-WSMan` with Negotiate authentication succeeded against `192.168.122.190`. This validated the local account credentials and showed that Negotiate/NTLM authentication worked for an explicit WinRM request.
 
-● NTLM/Negotiate authentication worked
-
-● The collector could authenticate to the Windows 11 endpoint
-
-
-Remote Sysmon Log Access Test
-
-The collector was then used to remotely query the Sysmon Operational log.
-
-Command:
-
-```powershell
-Invoke-Command -ComputerName 192.168.122.190 -Credential $cred -Authentication Negotiate -ScriptBlock { Get-WinEvent -LogName "Microsoft-Windows-Sysmon/Operational" -MaxEvents 1 }
-```
-
-The command successfully returned a Sysmon event.
-
-The returned event included:
+The collector then remotely queried the endpoint's Sysmon Operational log. The command returned an event with the following fields:
 
 ```text
 Event ID: 13
@@ -361,53 +126,15 @@ LogName: Microsoft-Windows-Sysmon/Operational
 Computer: WIN11-CLIENT01
 ```
 
-Finding
+This proved that the collector could reach the endpoint, authenticate with explicit credentials, and read the exact log required by the subscription. It did not prove that the WEF subscription authentication context could perform the same operation.
 
-This proved that the collector could:
+### Event Forwarding plugin validation
 
-1. Reach the Windows 11 endpoint
+The endpoint's Event Forwarding WinRM plugin returned `Enabled: true`, and its Resources path contained a registered resource. This confirmed that the WEF-specific WinRM plugin was installed and enabled.
 
-2. Authenticate successfully
+### Subscription configuration and runtime validation
 
-3. Remotely access the exact Sysmon log required for WEF
-
-
-Event Forwarding Plugin Verification
-
-The Windows Event Forwarding WinRM plugin was checked on WIN11-CLIENT01.
-
-Command:
-
-```powershell
-Get-Item "WSMan:\localhost\Plugin\Event Forwarding Plugin\Enabled"
-```
-
-Result:
-
-```text
-Enabled: true
-```
-
-The plugin resource was also verified:
-
-```powershell
-Get-ChildItem "WSMan:\localhost\Plugin\Event Forwarding Plugin\Resources"
-```
-
-A registered resource was present.
-
-This confirmed that the WEF-specific WinRM plugin was installed and enabled.
-
-
-Subscription Configuration Review
-
-The subscription configuration was displayed with:
-
-```powershell
-wecutil gs "SOC-Lab-Sysmon" /f:xml
-```
-
-Important configuration values included:
+`wecutil gs "SOC-Lab-Sysmon" /f:xml` showed the important subscription values:
 
 ```text
 SubscriptionType: CollectorInitiated
@@ -421,86 +148,170 @@ CommonUserName: WIN11-CLIENT01\SOCAdmin
 EventSource: 192.168.122.190
 ```
 
-The Sysmon query was:
+The Sysmon event query was:
 
 ```xml
 *[System[(EventID=1 or EventID=3 or EventID=13 or EventID=22)]]
 ```
 
-
-Runtime Status
-
-The subscription itself reported:
+The subscription-level runtime state was:
 
 ```text
 RunTimeStatus: Active
 LastError: 0
 ```
 
-However, the source continued to report:
+The source-level runtime state was still:
 
 ```text
 192.168.122.190
 RunTimeStatus: Trying
 ```
 
-Forwarded Events remained empty.
+The Forwarded Events log remained empty. The `Active` subscription state therefore indicated that the subscription was enabled and running, not that the source connection or event-delivery path was operational.
 
+## Commands and Queries
 
-Current Finding
+The principal commands, in troubleshooting order, were:
 
-The underlying Windows networking and remote-management components were successfully validated.
+```powershell
+# Collector: initialize and verify WEC
+wecutil qc
+Get-Service Wecsvc
 
-The following were confirmed working:
+# Collector: permit ICMP echo for connectivity testing
+New-NetFirewallRule -DisplayName "SOC Lab - Allow ICMPv4 Echo" -Protocol ICMPv4 -IcmpType 8 -Direction Inbound -Action Allow
 
-● IP connectivity
+# Endpoint: configure and verify WinRM/remoting
+winrm quickconfig
+Get-Service WinRM
+Set-NetConnectionProfile -InterfaceAlias "Ethernet" -NetworkCategory Private
+Enable-PSRemoting -Force
 
-● ICMP connectivity
+# WinRM validation
+Test-WSMan WIN11-CLIENT01
+Test-WSMan 192.168.122.190
 
-● TCP 5985
+# Collector: enumerate the manually created subscription
+wecutil es
 
-● WinRM service
+# Collector: configure workgroup trust and isolated-lab HTTP transport
+Set-Item WSMan:\localhost\Client\TrustedHosts -Value "WIN11-CLIENT01,192.168.122.190" -Force
+Get-Item WSMan:\localhost\Client\TrustedHosts
+Set-Item WSMan:\localhost\Client\AllowUnencrypted -Value $true
 
-● TrustedHosts
+# Collector: test the endpoint WinRM port
+Test-NetConnection 192.168.122.190 -Port 5985
 
-● Negotiate authentication
+# Endpoint: restore WinRM service state
+Set-Service WinRM -StartupType Automatic
+Start-Service WinRM
+Get-Service WinRM
 
-● Local administrator credentials
+# Collector: test explicit workgroup credentials
+$cred = Get-Credential
+Test-WSMan 192.168.122.190 -Authentication Negotiate -Credential $cred
 
-● Remote Sysmon log access
+# Collector: test remote access to the source Sysmon log
+Invoke-Command -ComputerName 192.168.122.190 -Credential $cred -Authentication Negotiate -ScriptBlock { Get-WinEvent -LogName "Microsoft-Windows-Sysmon/Operational" -MaxEvents 1 }
 
-● Event Forwarding Plugin
+# Endpoint: verify the WEF WinRM plugin
+Get-Item "WSMan:\localhost\Plugin\Event Forwarding Plugin\Enabled"
+Get-ChildItem "WSMan:\localhost\Plugin\Event Forwarding Plugin\Resources"
 
-● WEC service
+# Collector: inspect subscription configuration
+wecutil gs "SOC-Lab-Sysmon" /f:xml
+```
 
-● WEF subscription creation
+## Evidence
 
-Despite this, the collector-initiated WEF event source remained in a Trying state.
+- WEC service: `Running` on `WINSRV-COLLECTOR01`.
+- ICMP: succeeded after adding the collector firewall rule.
+- Endpoint WinRM service: restored to running with automatic startup.
+- WinRM endpoint: `Test-WSMan` succeeded by hostname and IP.
+- TCP 5985: `TcpTestSucceeded: True`.
+- TrustedHosts: `WIN11-CLIENT01,192.168.122.190`.
+- Transport setting: `AllowUnencrypted: true` for the isolated lab.
+- Credentialed WinRM: Negotiate authentication succeeded for `WIN11-CLIENT01\SOCAdmin`.
+- Remote log access: returned Sysmon Event ID 13 from `Microsoft-Windows-Sysmon/Operational` on `WIN11-CLIENT01`.
+- Event Forwarding plugin: enabled with a registered resource.
+- Subscription enumeration: `SOC-Lab-Sysmon` was present.
+- Subscription runtime: `Active`, `LastError: 0`.
+- Source runtime: `Trying`.
+- Forwarded Events: empty.
+- The supporting terminal recording for Day 5 is empty, so no recording is cited as validation evidence.
 
-The most likely remaining issue is the authentication model of the workgroup environment.
+## Challenges and Troubleshooting
 
-Collector-initiated WEF is designed primarily around domain identities or machine accounts. The current setup uses two non-domain systems and a local account.
+| Problem | Investigation | Resolution or status |
+|---|---|---|
+| Ping to collector failed | Compared subnet placement with host firewall behavior | Added an inbound ICMPv4 echo rule; ping then succeeded |
+| Endpoint network profile was Public | Checked `NetworkCategory` before enabling remoting | Changed the Ethernet profile to Private |
+| Event Viewer computer picker failed | GUI attempted to locate a domain computer object | Bypassed the picker and created the subscription manually with XML and `wecutil` |
+| Hostname source remained `Trying` | Runtime output indicated a hostname-resolution-related error | Replaced `WIN11-CLIENT01` with `192.168.122.190`; source still remained `Trying` |
+| Workgroup WinRM trust requirements | Checked non-domain authentication and transport settings | Added hostname and IP to `TrustedHosts`; enabled unencrypted HTTP for the isolated lab |
+| Endpoint WinRM service stopped | Checked service state during connection testing | Set automatic startup and restarted the service after correcting elevation issues |
+| Possible invalid credentials or inaccessible Sysmon log | Used credentialed `Test-WSMan` and `Invoke-Command` with Negotiate | Credentials and direct remote Sysmon access validated successfully |
+| Possible missing WEF plugin | Inspected the Event Forwarding Plugin and its resources | Plugin was enabled and a resource was registered |
+| Subscription showed `Active` but source showed `Trying` | Reviewed XML configuration, runtime status, network layers, authentication, and remote log access | Unresolved; no events reached Forwarded Events |
 
+## Findings and Analyst Notes
 
-Planned Next Step
+- The initial ping failure was caused by collector firewall behavior, not by a broken virtual network path.
+- Successful TCP 5985 and `Test-WSMan` results separated network and WinRM transport health from the unresolved WEF source connection.
+- Explicit credentials using Negotiate/NTLM were valid, and the collector could remotely read the target Sysmon log.
+- The WEF-specific WinRM plugin, WEC service, subscription object, and event query were present and enabled.
+- Subscription-level `Active` with `LastError: 0` did not mean forwarding had succeeded. Source-level `Trying` and an empty Forwarded Events log were the decisive operational indicators.
+- The leading hypothesis was that collector-initiated WEF was failing because of the workgroup authentication model. Collector-initiated WEF is primarily designed around domain identities or machine accounts, while this configuration used two non-domain systems and a local account.
+- The workgroup-authentication explanation remained a hypothesis, not a confirmed root cause. Introducing domain authentication was selected as the next controlled test.
 
-Tomorrow, the lab will introduce Active Directory Domain Services.
+## Decisions
 
-Planned sequence:
+- Use a manually defined XML subscription because the Event Viewer picker depended on domain computer discovery unavailable in the workgroup.
+- Replace the hostname source with the IP address to remove hostname resolution from the active failure path.
+- Permit `TrustedHosts` and unencrypted HTTP only within the isolated lab to test workgroup WinRM behavior; these settings were troubleshooting accommodations, not a production security recommendation.
+- Treat WEF as blocked despite the subscription's `Active` state because the source remained `Trying` and no events were forwarded.
+- Stop further workgroup-specific changes after validating the underlying layers and move the next test to domain-based authentication with AD DS.
 
-1. Install AD DS on WINSRV-COLLECTOR01
+## Skills Demonstrated
 
-2. Promote the server to a domain controller
+- Windows Server collector deployment
+- Windows Event Collector and WEF subscription administration
+- WinRM and PowerShell remoting configuration
+- Windows Firewall and network-layer troubleshooting
+- Workgroup authentication troubleshooting with TrustedHosts and Negotiate/NTLM
+- Remote Windows Event Log validation with `Get-WinEvent`
+- Sysmon event-channel and Event ID selection
+- Layered fault isolation and precise interpretation of runtime status
 
-3. Create a lab domain
+## Current Status
 
-4. Join WIN11-CLIENT01 to the domain
+| Component | Status |
+|---|---|
+| Collector VM | Operational |
+| IP and ICMP connectivity | Operational |
+| TCP 5985 | Operational |
+| WEC service | Operational |
+| Endpoint WinRM service | Operational |
+| TrustedHosts configuration | Complete |
+| Negotiate authentication with explicit local credentials | Operational |
+| Remote Sysmon log access | Operational |
+| Event Forwarding WinRM plugin | Operational |
+| `SOC-Lab-Sysmon` subscription object | Active |
+| Event source `192.168.122.190` | Trying / unresolved |
+| Forwarded Events delivery | Blocked; no events received |
+| Overall Day 5 objective | Blocked |
 
-5. Verify domain authentication
+## Next Steps
 
-6. Reconfigure or recreate the WEF subscription
+1. Install Active Directory Domain Services on `WINSRV-COLLECTOR01`.
+2. Promote the server to a domain controller.
+3. Create a lab domain.
+4. Join `WIN11-CLIENT01` to the domain.
+5. Verify domain authentication between the collector and endpoint.
+6. Reconfigure or recreate the WEF subscription under the domain authentication model.
+7. Generate matching Sysmon activity and verify that Event IDs `1`, `3`, `13`, and `22` reach Forwarded Events.
 
-...
+---
 
-[Message clipped]  View entire message
-
+[← Previous day](Day04.md) · [Documentation index](README.md) · [Next day →](Day06.md)

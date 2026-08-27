@@ -10,6 +10,8 @@ This project documents the design and operation of a practical SOC environment r
 
 The repository emphasizes more than installation. Each phase records the objective, implementation, evidence, problems encountered, troubleshooting process, analyst interpretation, and next steps.
 
+See the [documentation index](docs/README.md) for the chronological journal, supporting evidence, writing standard, and reusable daily-lab template.
+
 ## Current Capabilities
 
 - Ubuntu 24.04 LTS virtualization host running KVM/QEMU and libvirt
@@ -97,7 +99,7 @@ Status: **Operational**
 
 | Phase | Focus | Outcome | Documentation |
 |---|---|---|---|
-| Day 1 | Host and virtualization foundation | Installed Ubuntu, KVM/libvirt, and repository structure | [Day 1](docs/Day01) |
+| Day 1 | Host and virtualization foundation | Installed Ubuntu, KVM/libvirt, and repository structure | [Day 1](docs/Day01.md) |
 | Day 2 | Windows endpoint deployment | Built `WIN11-CLIENT01` and installed QEMU guest integration | [Day 2](docs/Day02.md) |
 | Day 3 | Sysmon deployment | Installed Sysmon and validated Event ID 1 telemetry | [Day 3](docs/Day03.md) |
 | Day 4 | Endpoint investigation | Analyzed process, Registry, and DNS activity across Sysmon events | [Day 4](docs/Day04.md) |
@@ -194,7 +196,10 @@ Instead of allowing WEF troubleshooting to block the project, the lab switched t
 soc-home-lab/
 ├── README.md
 ├── docs/
-│   ├── Day01
+│   ├── README.md
+│   ├── DOCUMENTATION-STANDARD.md
+│   ├── DAILY-LAB-TEMPLATE.md
+│   ├── Day01.md
 │   ├── Day02.md
 │   ├── Day03.md
 │   ├── Day04.md
