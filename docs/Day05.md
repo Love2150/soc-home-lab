@@ -225,21 +225,25 @@ wecutil gs "SOC-Lab-Sysmon" /f:xml
 
 ## Evidence
 
+### Linked screenshots
+
+- [Windows client VM state](../screenshots/day05/windows-client-vm-state.png) — records the original `WIN11-CLIENT01` virtual-machine state before the collector build.
+- [Windows Server VM creation](../screenshots/day05/windows-server-vm-creation.png) — records the Virtual Machine Manager workflow used to begin creating the collector VM.
+- [Collector host and WEC service status](../screenshots/day05/collector-host-and-wecsvc-status.png) — confirms the collector hostname, `192.168.122.129` address, and initial stopped state of `Wecsvc`.
+- [Collector ICMP firewall rule](../screenshots/day05/collector-icmp-firewall-rule.png) — shows successful creation of the inbound ICMPv4 echo rule.
+- [Ping before and after the firewall change](../screenshots/day05/collector-ping-before-and-after-firewall.png) — records the transition from 100% packet loss to successful replies.
+- [WEF hostname source in `Trying`](../screenshots/day05/wef-hostname-source-trying.png) — shows an active subscription whose hostname source remained in `Trying` with a WinRM trust error.
+- [WinRM `TrustedHosts` configuration](../screenshots/day05/winrm-trustedhosts-configuration.png) — confirms `WIN11-CLIENT01` was added to the collector's trusted-host list.
+- [WinRM IP test and WEF status](../screenshots/day05/winrm-ip-test-and-wef-status.png) — shows successful `Test-WSMan` connectivity by IP while the event source remained in `Trying`.
+- [WinRM transport and authentication tests](../screenshots/day05/winrm-transport-and-authentication-tests.png) — confirms unencrypted lab transport, TCP 5985 reachability, and credentialed Negotiate authentication.
+- [Event Forwarding plugin validation](../screenshots/day05/event-forwarding-plugin-validation.png) — confirms that the endpoint's Event Forwarding WinRM plugin was enabled with a registered resource.
+
+### Additional recorded validation
+
 - WEC service: `Running` on `WINSRV-COLLECTOR01`.
-- ICMP: succeeded after adding the collector firewall rule.
 - Endpoint WinRM service: restored to running with automatic startup.
-- WinRM endpoint: `Test-WSMan` succeeded by hostname and IP.
-- TCP 5985: `TcpTestSucceeded: True`.
-- TrustedHosts: `WIN11-CLIENT01,192.168.122.190`.
-- Transport setting: `AllowUnencrypted: true` for the isolated lab.
-- Credentialed WinRM: Negotiate authentication succeeded for `WIN11-CLIENT01\SOCAdmin`.
-- Remote log access: returned Sysmon Event ID 13 from `Microsoft-Windows-Sysmon/Operational` on `WIN11-CLIENT01`.
-- Event Forwarding plugin: enabled with a registered resource.
-- Subscription enumeration: `SOC-Lab-Sysmon` was present.
-- Subscription runtime: `Active`, `LastError: 0`.
-- Source runtime: `Trying`.
-- Forwarded Events: empty.
-- The supporting terminal recording for Day 5 is empty, so no recording is cited as validation evidence.
+- Remote log access: returned a Sysmon event from `Microsoft-Windows-Sysmon/Operational` on `WIN11-CLIENT01`.
+- Subscription runtime: `Active`, `LastError: 0`; source runtime: `Trying`; Forwarded Events remained empty.
 
 ## Challenges and Troubleshooting
 

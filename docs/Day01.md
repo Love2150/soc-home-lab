@@ -68,9 +68,8 @@ The source journal did not record the exact commands used during this session.
 
 ## Evidence
 
-- Hardware virtualization support was verified.
-- The `libvirtd` service was confirmed to be running.
-- Virtual Machine Manager was installed and verified.
+- [`libvirtd` service and `virsh` validation](../screenshots/day01/libvirtd-service-and-virsh-validation.png) — confirms that the virtualization service was running and records the corrected `virsh list --all` command.
+- Hardware virtualization support and Virtual Machine Manager installation were also verified during the session.
 - The initial project structure and `.gitignore` changes were successfully committed to GitHub.
 
 ## Challenges and Troubleshooting

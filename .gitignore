@@ -1,10 +1,32 @@
-# Ignore large VM files
+# Virtual machine artifacts
 ISOs/
 VirtualMachines/
 Snapshots/
-
 *.qcow2
 *.vmdk
 *.vdi
 *.vhdx
+
+# Runtime and capture output
 *.log
+*.pcap
+*.pcapng
+
+# Credentials and local configuration
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+*.p12
+*.pfx
+
+# Editor and operating-system files
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+__pycache__/
+*.py[cod]
+*~
+*.swp

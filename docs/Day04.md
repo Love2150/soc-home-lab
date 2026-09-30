@@ -114,18 +114,13 @@ Event Viewer > Applications and Services Logs > Microsoft > Windows > Sysmon > O
 
 ## Evidence
 
-Screenshots were captured for the following evidence:
+- [Windows Security failed-logon baseline](../screenshots/day04/windows-security-failed-logon-4625.png) — captures Security Event ID 4625 for a failed interactive logon on `WIN11-CLIENT01`.
+- [`ipconfig.exe` Process Create details](../screenshots/day04/ipconfig-process-create-event.png) — shows Sysmon Event ID 1 with command line, user, integrity level, and file hashes.
+- [Notepad Process Create event](../screenshots/day04/notepad-process-create-event.png) — shows Event ID 1 for the packaged Notepad executable in the Sysmon Operational log.
+- [Registry Value Set event](../screenshots/day04/registry-value-set-event.png) — shows Sysmon Event ID 13 and the affected Registry target.
+- [`curl.exe` DNS query](../screenshots/day04/curl-dns-query-event.png) — shows Sysmon Event ID 22 resolving `example.com` for `curl.exe`.
 
-- Sysmon Operational log.
-- Event ID 1 for Notepad.
-- Event ID 1 for Calculator.
-- Event ID 1 for `curl.exe`.
-- Event ID 13 Registry Value Set activity.
-- Event ID 22 DNS activity associated with `curl.exe`.
-- Active Sysmon configuration.
-- Event details showing `ParentImage`, `CommandLine`, `User`, and `Hashes`.
-
-The screenshots establish that Sysmon captured process, Registry, and DNS telemetry. No screenshot paths were recorded in the source journal, so links are not asserted here.
+Together, the linked evidence demonstrates process, Registry, DNS, and baseline authentication telemetry without claiming that the missing Event ID 3 network event was observed.
 
 ## Challenges and Troubleshooting
 

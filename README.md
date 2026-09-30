@@ -2,7 +2,7 @@
 
 An enterprise-style Security Operations Center lab built on Ubuntu and KVM to practice endpoint telemetry, SIEM operations, Active Directory monitoring, threat hunting, detection analysis, and incident investigation.
 
-![Wazuh SOC dashboard showing an active monitored endpoint](screenshots/day06/Screenshot%20from%202026-08-16%2022-32-47.png)
+![Wazuh SOC dashboard showing an active monitored endpoint](screenshots/day06/wazuh-dashboard-active-agent.png)
 
 ## Project Overview
 
@@ -23,7 +23,7 @@ See the [documentation index](docs/README.md) for the chronological journal, sup
 - DQL-based threat hunting in the Wazuh dashboard
 - Process, DNS, Registry, and authentication-event investigation
 - Active Directory trust troubleshooting and authentication validation
-- Centralized technical documentation, screenshots, and terminal recordings
+- Centralized technical documentation, screenshots, and retained terminal logs
 
 ## Architecture
 
@@ -207,7 +207,6 @@ soc-home-lab/
 │   ├── Day06.md
 │   ├── Day07.md
 │   └── logs/
-├── recordings/
 └── screenshots/
     ├── day01/
     ├── day02/

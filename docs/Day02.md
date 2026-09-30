@@ -67,16 +67,10 @@ No repeatable command-line sequence was recorded for this phase. Deployment and 
 
 ## Evidence
 
-The session recorded the following screenshot subjects:
-
-- Windows Setup.
-- Windows installation progress.
-- Initial Windows desktop.
-- Virtual Machine Manager configuration.
-- Mounted VirtIO ISO.
-- Running QEMU Guest Agent service.
-
-No relative screenshot paths were included in the source journal.
+- [Windows 11 ready to install](../screenshots/day02/windows-11-ready-to-install.png) — records the final Windows Setup confirmation before installation.
+- [Windows 11 installation progress](../screenshots/day02/windows-11-installation-progress.png) — shows the operating-system installation in progress.
+- [Windows 11 system information](../screenshots/day02/windows-11-system-about.png) — confirms the installed Windows 11 Enterprise environment.
+- [QEMU Guest Agent service](../screenshots/day02/qemu-guest-agent-service.png) — shows the Windows Services console used to validate guest integration.
 
 ## Challenges and Troubleshooting
 

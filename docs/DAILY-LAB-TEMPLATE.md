@@ -46,7 +46,7 @@ command or query
 
 ## Evidence
 
-- [Screenshot or artifact](relative/path)
+- Screenshot or artifact — replace this text with a valid relative repository link
 - Relevant event fields, output, or validation result
 
 ## Challenges and Troubleshooting
@@ -81,4 +81,4 @@ command or query
 
 ---
 
-[← Previous day](DayNN.md) · [Documentation index](README.md) · [Next day →](DayNN.md)
+`Previous day link` · [Documentation index](README.md) · `Next day link`

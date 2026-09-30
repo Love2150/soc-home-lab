@@ -36,7 +36,6 @@ Active Directory authentication monitoring
 
 - [`logs/`](logs/) — raw terminal or troubleshooting logs retained for reference
 - [`../screenshots/`](../screenshots/) — screenshots grouped by lab day
-- [`../recordings/`](../recordings/) — terminal recordings and session artifacts
 
 Raw evidence may contain terminal control characters, repetitive output, or incomplete captures. The daily journals are the authoritative summaries of what was attempted, observed, decided, and completed.
 

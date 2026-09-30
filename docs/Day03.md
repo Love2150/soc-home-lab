@@ -100,11 +100,10 @@ powershell.exe
 
 ## Evidence
 
-- Screenshot 1 documented successful Sysmon installation.
-- Screenshot 2 showed Event Viewer at **Microsoft → Windows → Sysmon → Operational**.
-- Screenshot 3 showed a Process Create event (Event ID 1).
-- Screenshot 4 showed the event fields `Image`, `ParentImage`, `CommandLine`, `User`, SHA256 hash, and integrity level.
-- Screenshot 5 documented test events generated with Notepad, Calculator, and PowerShell.
+- [Sysmon installation success](../screenshots/day03/sysmon-installation-success.png) — records the successful Sysmon installation and configuration load.
+- [Test-process generation](../screenshots/day03/test-process-generation.png) — records the commands used to generate known Notepad, Calculator, and PowerShell activity.
+- [Sysmon Process Create event](../screenshots/day03/sysmon-process-create-event.png) — shows Event ID 1 in the Sysmon Operational log.
+- [Sysmon process-event fields](../screenshots/day03/sysmon-process-event-fields.png) — shows process metadata used for analysis, including image, command line, user, integrity level, and hashes.
 
 ## Challenges and Troubleshooting
 

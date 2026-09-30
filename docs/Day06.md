@@ -212,12 +212,25 @@ agent.name:"WIN11-CLIENT01" AND data.win.system.eventID:1
 
 ## Evidence
 
+### Infrastructure transition and WEF troubleshooting
+
+- [Active Directory Domain Services installed](../screenshots/day06/ad-domain-services-installed.png) — confirms successful AD DS feature installation.
+- [`soclab.local` domain details](../screenshots/day06/soclab-domain-details.png) — records the domain and domain-controller configuration returned by `Get-ADDomain`.
+- [Workstation DNS server configuration](../screenshots/day06/workstation-dns-server-configuration.png) — points the Windows client at the domain controller's DNS service.
+- [`soclab.local` DNS resolution](../screenshots/day06/soclab-dns-resolution.png) — validates the domain and domain-controller service records.
+- [Domain secure-channel validation](../screenshots/day06/domain-secure-channel-validation.png) — confirms domain membership and a healthy workstation secure channel.
+- [Endpoint DNS and WinRM validation](../screenshots/day06/endpoint-dns-and-winrm-validation.png) — confirms client-name resolution and successful `Test-WSMan` connectivity from the server.
+- [Domain WEF source still in `Trying`](../screenshots/day06/wef-domain-source-still-trying.png) — records that the subscription source remained unresolved after the domain transition.
+- [Remote Sysmon event read](../screenshots/day06/remote-sysmon-event-read.png) — proves the server could remotely retrieve a Sysmon event from the endpoint.
+- [WEF Group Policy creation](../screenshots/day06/wef-group-policy-creation.png) — records creation of the `SOC-Lab-WEF` Group Policy during the final WEF attempt.
+
 ### Service and agent state
 
 - Wazuh Manager, Indexer, and Dashboard returned `active`.
 - `Get-Service WazuhSvc` returned `Running`.
 - The agent log stated that the agent was online.
 - `agent_control -l` showed `WIN11-CLIENT01` as `Active` with agent ID `001`.
+- [Wazuh dashboard with one active agent](../screenshots/day06/wazuh-dashboard-active-agent.png) — confirms the enrolled endpoint and populated alert overview.
 
 ### Source and ingestion validation
 
@@ -225,6 +238,9 @@ agent.name:"WIN11-CLIENT01" AND data.win.system.eventID:1
 - Wazuh manager archive output contained the Sysmon provider, channel, and Event ID 1.
 - The Threat Hunting view showed dozens of endpoint alerts after the high-severity-only filter was removed.
 - The DQL process-creation query returned expandable Sysmon events.
+- [Wazuh Discover context](../screenshots/day06/wazuh-discover-context.png) — shows surrounding indexed records from the manager and endpoint.
+- [Wazuh Sysmon event details](../screenshots/day06/wazuh-sysmon-event-details.png) — shows Event ID 1 fields for `WIN11-CLIENT01.soclab.local`.
+- [Wazuh process-event context](../screenshots/day06/wazuh-process-event-context.png) — shows nearby `net.exe`, PowerShell, and `secedit.exe` activity used for investigation context.
 
 ### First Sysmon investigation record
 
